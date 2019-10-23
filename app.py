@@ -5,10 +5,15 @@ import dash_html_components as html
 import pandas as pd
 import plotly as py
 import plotly.graph_objs as go
+import numpy as np
+import plotly.figure_factory as ff
+import base64
+from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 from plotly.graph_objs import *
 
 ###### Import a dataframe #######
 df = pd.read_pickle('virginia_totals.pkl')
+df2 = pd.read_csv('va-fips.csv')
 options_list=list(df['jurisdiction'].value_counts().sort_index().index)
 
 ########### Initiate the app
@@ -16,6 +21,8 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
 app.title='VA 2016'
+
+
 
 ####### Layout of the app ########
 app.layout = html.Div([
@@ -25,6 +32,8 @@ app.layout = html.Div([
         options=[{'label': i, 'value': i} for i in options_list],
         value=options_list[0]
     ),
+    html.Br(),
+    dcc.Graph(id='display-value-2'),
     html.Br(),
     dcc.Graph(id='display-value'),
     html.Br(),
@@ -52,14 +61,38 @@ def juris_picker(juris_name):
                      y=list(juris_df['votes']['Other']),
                      marker=dict(color='#009900'),
                      name='Other')
-
     mylayout = go.Layout(
         title='Votes by candidate for: {}'.format(juris_name),
         xaxis=dict(title='Precincts'),
         yaxis=dict(title='Number of Votes')
+
     )
+
     fig = go.Figure(data=[mydata1, mydata2, mydata3], layout=mylayout)
+
     return fig
+
+@app.callback(dash.dependencies.Output('display-value-2', 'figure'),
+              [dash.dependencies.Input('dropdown', 'value')])
+def juris_picker2(juris_name):
+    import plotly.figure_factory as ff
+    df2['fips']=df2['fips_code'].astype(str)
+
+    df2['upper_county'] = df2['locality'].str.upper() + ' COUNTY'
+
+    df2['selected']=0
+    df2.loc[df2['upper_county']==juris_name, 'selected']=1
+
+    fips = df2['fips']
+    values = df2['selected']
+
+    fig3 = ff.create_choropleth(fips=fips,
+                           values=values,
+                           colorscale=['Gray', 'Yellow'],
+                           scope=['VA'],
+                           county_outline={'color': 'rgb(255,255,255)', 'width': 0.5})
+
+    return fig3
 
 
 ######### Run the app #########
