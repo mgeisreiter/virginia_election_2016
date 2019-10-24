@@ -17,10 +17,7 @@ df2 = pd.read_csv('va-fips.csv')
 df2['jurisdiction'] = df2['locality'].str.upper() + ' COUNTY'
 df3 = pd.concat([df, df2], axis=1, sort=False, join = 'inner')
 
-
-
-
-options_list=list(df3['jurisdiction'].value_counts().sort_index().index)
+options_list=list(df['jurisdiction'].value_counts().sort_index().index)
 
 ########### Initiate the app
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
