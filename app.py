@@ -6,18 +6,18 @@ import pandas as pd
 import plotly as py
 import plotly.graph_objs as go
 import numpy as np
-import plotly.figure_factory as ff
-import base64
-from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 from plotly.graph_objs import *
 
 ###### Import a dataframe #######
 df = pd.read_pickle('virginia_totals.pkl')
-df2 = pd.read_csv('va-fips.csv')
-df2['jurisdiction'] = df2['locality'].str.upper() + ' COUNTY'
-df3 = pd.concat([df, df2], axis=1, sort=False, join = 'inner')
 
 options_list=list(df['jurisdiction'].value_counts().sort_index().index)
+
+# Read in the USA counties shape files
+from urllib.request import urlopen
+import json
+with urlopen('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json') as response:
+    counties = json.load(response)
 
 ########### Initiate the app
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -78,24 +78,24 @@ def juris_picker(juris_name):
 @app.callback(dash.dependencies.Output('display-value-2', 'figure'),
               [dash.dependencies.Input('dropdown', 'value')])
 def juris_picker2(juris_name):
-    import plotly.figure_factory as ff
-    df2['fips']=df2['fips_code'].astype(str)
 
-    df2['upper_county'] = df2['locality'].str.upper() + ' COUNTY'
+    df['selected']=np.where(df['jurisdiction']==juris_name,1,0)
+    fig = go.Figure(go.Choroplethmapbox(geojson=counties,
+                                        locations=df['FIPS'],
+                                        z=df['selected'],
+                                        # colorscale=['blues'],
+                                        text=df['county_name'],
+                                        hoverinfo='text',
+                                        zmin=0,
+                                        zmax=1,
+                                        marker_line_width=.5
+                                        ))
+    fig.update_layout(mapbox_style="carto-positron",
+                      mapbox_zoom=5.8,
+                      mapbox_center = {"lat": 38.0293, "lon": -79.4428})
+    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    return fig
 
-    df2['selected']=0
-    df2.loc[df2['upper_county']==juris_name, 'selected']=1
-
-    fips = df2['fips']
-    values = df2['selected']
-
-    fig3 = ff.create_choropleth(fips=fips,
-                           values=values,
-                           colorscale=['Gray', 'Yellow'],
-                           scope=['VA'],
-                           county_outline={'color': 'rgb(255,255,255)', 'width': 0.5})
-
-    return fig3
 
 
 ######### Run the app #########
